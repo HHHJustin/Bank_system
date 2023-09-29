@@ -38,13 +38,16 @@ def error():
 @app.route("/register")
 def register():
     return render_template("register.html")
-
+# TODO: use json format as request body.
+# TODO: restful api regard everything as resources so use noun. as much as possible.
+#  POST /users or /registration
 @app.route("/signup" , methods=["POST"])
 def signup():
     nickname = request.form["nickname"]
     account = request.form["account"]
     password = request.form["password"]
-    cursor.execute("SELECT account FROM users")
+
+    cursor.execute("SELECT account FROM users") #TODO: Use unique constrain or unique index. 
     data = cursor.fetchall()
     account_list = []
     for row in data:
@@ -53,20 +56,32 @@ def signup():
         return redirect("\error?msg=TheAccountIsExisted!")
     else: 
     # cur.execute("INSERT INTO users(id, account, password, nickname) VALUES (1, 'yaya650042', 'zxcv4567', 'Yaya');")
+        #TODO: use AUTO_INCREMENT id or uuid.
+        # https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-uuid/
         length = len(account_list) + 1
+        #TODO: password shouldn't be plain text in database. Use bcrypt to store the password
+        # https://www.geeksforgeeks.org/hashing-passwords-in-python-with-bcrypt
         cursor.execute("INSERT INTO users(id, account, password, nickname) VALUES (%s, %s, %s, %s);", (length, account, password, nickname))
         conn.commit()
         print("Success!!!")
         return redirect("/")
-
+# POST /users/login
 @app.route("/signin", methods=["POST"])
 def signin():
     account = request.form["account"]
     password = request.form["password"]
+    # Do not select *. Specify the column name. SELECT id, acount, password FROM users;
+    # https://tanelpoder.com/posts/reasons-why-select-star-is-bad-for-sql-performance/?source=post_page-----49e769dc3cdc--------------------------------
     cursor.execute("SELECT * FROM users WHERE account = %s AND password = %s;", (account, password))
     user = cursor.fetchone()
     
     if user:
+        # TODO: For session base authentication. It should be a nnpredictable secure Random id and reveal no information.
+        # https://vicxu.medium.com/authentication-%E9%82%A3%E4%BA%9B%E5%B0%8F%E4%BA%8B%E4%B8%8A%E9%9B%86-cookie-%E8%88%87-session-%E4%BB%8B%E7%B4%B9-1da2d413afa2
+        # The session base authentication should fullfil the same origin policy so we can't not separate the FE and BE. 
+
+        # TODO: In the morden web architecture. Token-based authentication is more prefer. The FE and BE can be separated.
+        # https://vicxu.medium.com/%E6%B7%BA%E8%AB%87-authentication-%E4%B8%AD%E9%9B%86-token-based-authentication-90139fbcb897
         session["account"] = account
 
         return render_template("member.html")
@@ -90,6 +105,10 @@ def member():
 @app.route("/deposit", methods=["POST"])
 def deposit():
     deposit_money = request.form["deposit"]
+    #TODO: Create a middleware to handle user login.
+    # https://fastapi.tiangolo.com/tutorial/middleware/
+    # Middleware is a decorator pattern:
+    # https://refactoring.guru/design-patterns/decorator
     account = session["account"]
     cursor.execute("SELECT * FROM users WHERE account = %s;", (account,))
     user = cursor.fetchone()
